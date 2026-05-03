@@ -1,0 +1,24 @@
+project:
+  type: website
+
+website:
+  description: "A blog built with Quarto"
+  # Update if your GitHub repo isn't named "blog" or your username differs.
+  site-url: https://jujuliaa12.github.io/blog/
+  title: "myblog"
+  navbar:
+    right:
+      - about.qmd
+      - icon: github
+        href: https://github.com/jujuliaa12
+      - icon: bluesky
+        href: https://bsky.app/
+format:
+  html:
+    theme:
+      - cosmo
+      - brand
+    css: styles.css
+
+
+

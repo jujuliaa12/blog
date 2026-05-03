@@ -1,0 +1,15 @@
+# Quarto build / cache (regenerated on every render)
+/.quarto/
+/_site/
+/_freeze/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Temporary render files
+*.html.tmp
+
+**/*.quarto_ipynb
