@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>myblog</title>
+<link>https://jujuliaa12.github.io/blog/</link>
+<atom:link href="https://jujuliaa12.github.io/blog/index.xml" rel="self" type="application/rss+xml"/>
+<description>A blog built with Quarto</description>
+<generator>quarto-1.9.37</generator>
+<lastBuildDate>Sat, 02 May 2026 16:00:00 GMT</lastBuildDate>
+<item>
+  <title>Post With Code</title>
+  <dc:creator>Harlow Malloc</dc:creator>
+  <link>https://jujuliaa12.github.io/blog/posts/post-with-code/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>This is a post with executable code.</p>
+
+
+
+ ]]></description>
+  <category>news</category>
+  <category>code</category>
+  <category>analysis</category>
+  <guid>https://jujuliaa12.github.io/blog/posts/post-with-code/</guid>
+  <pubDate>Sat, 02 May 2026 16:00:00 GMT</pubDate>
+  <media:content url="https://jujuliaa12.github.io/blog/posts/post-with-code/image.jpg" medium="image" type="image/jpeg"/>
+</item>
+<item>
+  <title>Why intensity-based ranking fails in pseudopupil detection</title>
+  <dc:creator>Julia Tseng</dc:creator>
+  <link>https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<section id="the-puzzle" class="level2">
+<h2 class="anchored" data-anchor-id="the-puzzle">The puzzle</h2>
+<p>Out of every 10 specimens my pseudopupil pipeline got wrong, 3 had the right answer already in hand and threw it away. This post is about those three: cases where the failure isn’t detection but selection, and where every “obvious” fix made things worse.</p>
+<p>The setup, briefly. Pseudopupil detection on insect compound eyes is, on paper, a small-blob detection problem. Each specimen is photographed from five viewing angles (S0–S4) under two illumination conditions; the difference image highlights a small dark structure that marks where the eye is looking back at the camera. The standard pipeline is threshold → connected components → score the candidates → pick the best. I built that. On 69 <em>Aeshna isoceles</em> specimens it gets the right region 67 % of the time.</p>
+<p>Then I ran the diagnostic that produced the figure below. For every specimen, instead of looking at the top-1 candidate, look at the entire pool the matcher returned, and ask: was <em>any</em> candidate close to the ground truth? That’s the oracle.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig1_oracle_vs_top1.png" class="img-fluid figure-img"></p>
+<figcaption>Oracle vs top-1 ROI hit on 69 Aeshna specimens. The 7-specimen gap is the recoverable part — those are the cases where the right answer was already in the candidate pool.</figcaption>
+</figure>
+</div>
+<p>The oracle gets 53 / 69. The production top-1 gets 46 / 69. Of the 23 failures, 7 — almost a third — are pure ranking failures. The candidate is there. We just don’t pick it.</p>
+</section>
+<section id="why-more-candidates-dont-help" class="level2">
+<h2 class="anchored" data-anchor-id="why-more-candidates-dont-help">Why more candidates don’t help</h2>
+<p>The first instinct here is to enlarge the candidate pool. If the ranker can’t reliably find the right blob in a pool of 10, surely it can find it in a pool of 100. So I built a peak-based candidate generator with intensity ranking and swept <code>N</code>:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig2_n_vs_accuracy.png" class="img-fluid figure-img"></p>
+<figcaption>Top-1 accuracy under intensity ranking as the candidate pool grows from N = 10 to N = 300. The curve never crosses the current pipeline’s oracle ceiling.</figcaption>
+</figure>
+</div>
+<p>The curve creeps up but never catches the production pipeline. At N = 10 we get 27 / 69; at N = 100, 46; at N = 300, 61 — still 8 specimens short. The asymptote is below the bar we already have.</p>
+<p>If the ranker can’t separate signal from structured noise, more candidates just gives it more noise to sort through. This isn’t a parameter problem. It’s a feature-space problem.</p>
+</section>
+<section id="what-i-tried" class="level2">
+<h2 class="anchored" data-anchor-id="what-i-tried">What I tried</h2>
+<p>Three families of single-blob, single-view ranking features. All three failed, in different ways, and each failure falsified a different assumption about what makes the pseudopupil special.</p>
+<p><strong>Intensity.</strong> The first thing you reach for. The pseudopupil shows up in the difference image; the difference image is bright where it shows up; therefore rank by brightness. The picture below is what intensity ranking gives you on a noisier specimen — the cyan plus is ground truth, the lime crosses are the top three peaks by intensity, and the yellow circle is the actual pseudopupil:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig3_specular_vs_real.png" class="img-fluid figure-img"></p>
+<figcaption>Top intensity peaks (lime, ranked 1–3) sit on saturation features. The real pseudopupil (yellow) is at intensity rank 3 in this image — in many specimens it sits past rank 20.</figcaption>
+</figure>
+</div>
+<p>The thing about specular reflections is that they’re bright. They’re the camera looking back at a polished cuticle facet. After difference-and-blur the specular spot’s edges pile into peaks that out-bright the actual pseudopupil. The brightest signal in this image is not the signal we want. It’s the signal that isn’t moving.</p>
+<p><strong>Area.</strong> Next prior: real pseudopupils are a characteristic size, so demote the giant saturation patches and the stray noise specks. I wrote a hard area filter, calibrated from looking at the failure cases. Top-1 accuracy dropped from 67 % to about 50 %.</p>
+<p>The reason was both straightforward and embarrassing. I had read “real pseudopupil = 1 k–10 k pixels” off the failure subset — i.e. the cases where the pipeline was wrong. When I checked the success cases, oracle blob area spanned 600 px to 1.3 million px, with 16 of the 69 oracles larger than 100,000 px. The “characteristic size” range I’d derived was a property of my failure sample, not of pseudopupils. Selection bias on the very subset I was trying to diagnose.</p>
+<p><strong>Circularity.</strong> The last canonical prior: pseudopupils are roughly circular. I tried <code>0.5 · log_area + 0.5 · circularity</code> as a soft ranking score. Top-1 collapsed to 18 / 69 — 26 %.</p>
+<p>Forensics, after the fact: the difference image’s blobs come from subtracting two slightly-shifted views, so their boundaries are ragged. The real signal looks irregular. Tiny noise specks, on the other hand, are accidentally circular by chance — three pixels in a clump are roughly round. Optimising for circularity, in this pipeline, is optimising for noise.</p>
+<p>I ran an 18-criterion sweep over every reasonable combination of intensity, area, circularity, extent, solidity, and a centre/ring peak ratio. Nothing yielded more than +2 specimens of headroom over the area baseline.</p>
+</section>
+<section id="why-single-view-features-cant-work" class="level2">
+<h2 class="anchored" data-anchor-id="why-single-view-features-cant-work">Why single-view features can’t work</h2>
+<p>Step back. What do those three failed features have in common?</p>
+<p>They’re all properties of <em>one blob</em>, computed from <em>one image</em>. And they all failed for a related reason: the structured noise in this dataset — saturation, specular reflection, the sharp gradients that the difference operator throws off — looks, <em>locally</em>, more like a pseudopupil than the pseudopupil does. Brighter. Better-sized. Rounder. Single-view appearance features can’t separate signal from structured noise, because the noise is engineered, by the imaging chain, to look exactly like the signal.</p>
+<p>What the noise <em>doesn’t</em> have is multi-view geometric coherence. The pseudopupil is a real 3-D structure on the eye. As azimuth and elevation change between views, its image position migrates along a smooth trajectory that depends on the eye’s geometry. Specular reflections, by contrast, are surface-property artefacts: their image position depends on the lighting and on whichever facet catches the camera, and they jump around unpredictably from one view to the next.</p>
+<p>This is the mechanism. Here it is on one <em>Aeshna</em> specimen:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig4_cross_view_trajectory.png" class="img-fluid figure-img"></p>
+<figcaption>Picked group (green) vs runner-up group (cyan) across S0–S4. The picked group migrates smoothly. The runner-up jumps roughly 580 px between adjacent views — characteristic of a specular artefact whose image position isn’t tied to a stable 3-D point.</figcaption>
+</figure>
+</div>
+<p>Plotting the same two trajectories in raw image coordinates makes the difference even cleaner:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig4b_trajectory_overlay.png" class="img-fluid figure-img"></p>
+<figcaption>The same two groups in image coordinates. The picked-group trajectory traces a tight, near-linear path; the runner-up positions look effectively independent across views. This is the structural property the scoring stage is currently failing to exploit.</figcaption>
+</figure>
+</div>
+<p>The matcher already enforces a coarse version of this — each view’s blob has to be within 60 px of the reference view’s blob to be kept in the group at all. But the scoring stage on top of the matcher still leans heavily on per-view appearance. That is where the residual misalignment lives.</p>
+</section>
+<section id="the-trap-of-naive-cross-view-consistency" class="level2">
+<h2 class="anchored" data-anchor-id="the-trap-of-naive-cross-view-consistency">The trap of naive cross-view consistency</h2>
+<p>Here’s the part that took me weeks to see, and that I think is the genuinely useful piece of this post.</p>
+<p>Once I’d convinced myself that “single-view bad, multi-view good,” I built what felt like the obvious feature: penalise candidates whose appearance varies a lot across the five views. Real signal should be consistent. Noise should be variable. Right?</p>
+<p>The direction came out exactly backwards.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig5_appearance_cv.png" class="img-fluid figure-img"></p>
+<figcaption>Cross-view area CV on the 14 RANK-failure specimens. Wrong (saturation-driven) groups have low CV; oracle groups have high CV.</figcaption>
+</figure>
+</div>
+<p>A saturation artefact clips uniformly across every view — the camera is at its sensor limit, so its area and shape barely change. A real pseudopupil is a 3-D faceted structure whose 2-D projection genuinely differs from view to view. That’s <em>why</em> we have multiple views in the first place. Photometric consistency across views is not the same thing as target consistency. On this dataset it’s closer to its opposite.</p>
+<p>The right multi-view feature is geometric, not photometric: where the blob sits across views, not what it looks like at each one.</p>
+</section>
+<section id="what-this-leaves-us-with" class="level2">
+<h2 class="anchored" data-anchor-id="what-this-leaves-us-with">What this leaves us with</h2>
+<p>The picture above changes how I’d build the next iteration. It also changes what I think this kind of problem demands more broadly.</p>
+<p>Locally: the next ranker should treat multi-view geometric coherence as the primary signal — trajectory smoothness, deviation from a linear migration model fit to the specimen’s azimuth — with appearance features kept only as tie-breakers. That’s a classical CV ranker with maybe a small learned component if the trajectory features need calibration. Not a deep model.</p>
+<p>More broadly, it’s a small-data biomedical-CV taste statement. An end-to-end network trained on 50–100 specimens of one species will eagerly learn to rank specular reflections highly, because specular reflections look — to a CNN’s local receptive field — like the most “pseudopupil-like” thing in the image. The network has no way to distinguish a real 3-D structure from a brighter, sharper, rounder fake. Until the structural property that separates signal from noise is identified explicitly, adding capacity just gives the model more parameters with which to overfit the artefact. <strong>Failure-mode analysis matters more than model architecture in this regime.</strong></p>
+<p>A follow-up post will show how multi-view trajectory smoothness can be turned from a post-hoc filter into a primary ranking signal, and where that does (and doesn’t) close the 7-specimen gap. The broader question — whether a structural prior baked into the architecture can replace post-hoc geometric filtering — is what’s pulling me toward the next chapter of this work.</p>
+<hr>
+<p><em>All numbers above come from a 21-decision research log on the same 69-specimen dataset; code, figures, and the full diagnostic trail are on <a href="https://github.com/jujuliaa12/InsectPseudopupilDetection">GitHub</a>.</em></p>
+
+
+</section>
+
+ ]]></description>
+  <category>computer-vision</category>
+  <category>diagnostic</category>
+  <category>small-data</category>
+  <guid>https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/</guid>
+  <pubDate>Sat, 02 May 2026 16:00:00 GMT</pubDate>
+  <media:content url="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/thumbnail.png" medium="image" type="image/png" height="144" width="144"/>
+</item>
+<item>
+  <title>Welcome To My Blog</title>
+  <dc:creator>Tristan O&#39;Malley</dc:creator>
+  <link>https://jujuliaa12.github.io/blog/posts/welcome/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>This is the first post in a Quarto blog. Welcome!</p>
+<p><img src="https://jujuliaa12.github.io/blog/posts/welcome/thumbnail.jpg" class="img-fluid"></p>
+<p>Since this post doesn’t specify an explicit <code>image</code>, the first image in the post will be used in the listing page of posts.</p>
+
+
+
+ ]]></description>
+  <category>news</category>
+  <guid>https://jujuliaa12.github.io/blog/posts/welcome/</guid>
+  <pubDate>Wed, 29 Apr 2026 16:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>
