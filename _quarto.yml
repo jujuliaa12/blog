@@ -11,6 +11,9 @@ website:
   title: "notes.judayori"
   favicon: logo.svg
   navbar:
+    # 品牌區只留 logo。title: false 之後導覽列不會再重複寫一次站名，
+    # website.title 仍然是瀏覽器分頁標題和首頁標題，不受影響。
+    title: false
     logo: logo.svg
     logo-alt: "一隻戴眼鏡、在筆電前學寫程式的柴犬"
     right:
@@ -25,6 +28,9 @@ website:
       #   href: https://bsky.app/profile/你的帳號
 format:
   html:
+    # 站台只有淺色主題。圖表也要跟著只做淺色，
+    # 不要在 SVG 或 CSS 裡留 prefers-color-scheme，否則深色模式的讀者
+    # 會拿到淺字配白底。
     theme:
       - cosmo
       - brand
