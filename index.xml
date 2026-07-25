@@ -5,10 +5,10 @@
       xmlns:dc="http://purl.org/dc/elements/1.1/" 
       version="2.0">
 <channel>
-<title>myblog</title>
+<title>Failure Modes</title>
 <link>https://blog.judayori.com/</link>
 <atom:link href="https://blog.judayori.com/index.xml" rel="self" type="application/rss+xml"/>
-<description>A blog built with Quarto</description>
+<description>Diagnostic notes on computer vision in small-data regimes — what breaks, why, and what the failure tells you that more capacity won&#39;t.</description>
 <generator>quarto-1.10.18</generator>
 <lastBuildDate>Sun, 03 May 2026 00:00:00 GMT</lastBuildDate>
 <item>
