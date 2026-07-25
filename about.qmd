@@ -1,8 +1,13 @@
 ---
 title: "About"
+subtitle: "AI Solutions Engineer · Software Validation Engineer"
 image: profile.jpg
 about:
-  template: jolla
+  # trestles = 左欄頭像/連結 + 右欄靠左對齊正文，適合較長的自介。
+  # 想換回置中的短版型就改成 jolla。
+  template: trestles
+  image-shape: rounded
+  image-width: 14em
   links:
     - icon: github
       text: Github
@@ -16,4 +21,37 @@ about:
     #   href: https://bsky.app/profile/你的帳號
 ---
 
-About this blog
+Hi, I'm Yu-Hsuan Tseng, a computer science graduate from the University
+of Adelaide working across **artificial intelligence, machine learning,
+software engineering, and software validation**.
+
+My work spans both research and applied engineering. I have worked on
+projects involving **computer vision, biomedical image analysis,
+retrieval-augmented generation (RAG), AI-powered customer support
+systems, telecommunications technology, and medical device software
+validation**.
+
+Professionally, I work as an **AI Solutions Engineer** and **Software
+Validation Engineer**. My work ranges from designing AI-assisted
+workflows and building knowledge-driven conversational systems to
+defining software requirements, developing verification strategies,
+creating test cases, analysing defects, and producing traceable
+engineering documentation.
+
+What interests me most is not only whether a system works, but **why it
+works, where it fails, and how we can make it more reliable**.
+
+This website is my technical notebook and project archive. I use it to
+document the thinking behind the systems and research projects I work
+on, including architecture decisions, experiments, failed approaches,
+debugging processes, validation strategies, and lessons learned during
+implementation.
+
+Rather than showing only polished final results, I want to keep a record
+of the reasoning and engineering process behind them.
+
+My current interests sit at the intersection of **AI research,
+intelligent systems, computer vision, and reliable software
+engineering**, and I am particularly interested in problems where
+machine learning systems need to operate robustly in real-world
+environments.
