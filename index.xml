@@ -9,34 +9,12 @@
 <link>https://jujuliaa12.github.io/blog/</link>
 <atom:link href="https://jujuliaa12.github.io/blog/index.xml" rel="self" type="application/rss+xml"/>
 <description>A blog built with Quarto</description>
-<generator>quarto-1.9.37</generator>
-<lastBuildDate>Sat, 02 May 2026 16:00:00 GMT</lastBuildDate>
-<item>
-  <title>Post With Code</title>
-  <dc:creator>Harlow Malloc</dc:creator>
-  <link>https://jujuliaa12.github.io/blog/posts/post-with-code/</link>
-  <description><![CDATA[ 
-
-
-
-
-
-<p>This is a post with executable code.</p>
-
-
-
- ]]></description>
-  <category>news</category>
-  <category>code</category>
-  <category>analysis</category>
-  <guid>https://jujuliaa12.github.io/blog/posts/post-with-code/</guid>
-  <pubDate>Sat, 02 May 2026 16:00:00 GMT</pubDate>
-  <media:content url="https://jujuliaa12.github.io/blog/posts/post-with-code/image.jpg" medium="image" type="image/jpeg"/>
-</item>
+<generator>quarto-1.10.18</generator>
+<lastBuildDate>Sun, 03 May 2026 00:00:00 GMT</lastBuildDate>
 <item>
   <title>Why intensity-based ranking fails in pseudopupil detection</title>
   <dc:creator>Julia Tseng</dc:creator>
-  <link>https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/</link>
+  <link>https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/</link>
   <description><![CDATA[ 
 
 
@@ -50,7 +28,7 @@
 <p>Then I ran the diagnostic that produced the figure below. For every specimen, instead of looking at the top-1 candidate, look at the entire pool the matcher returned, and ask: was <em>any</em> candidate close to the ground truth? That’s the oracle.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig1_oracle_vs_top1.png" class="img-fluid figure-img"></p>
+<p><img src="https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/fig1_oracle_vs_top1.png" class="img-fluid figure-img"></p>
 <figcaption>Oracle vs top-1 ROI hit on 69 Aeshna specimens. The 7-specimen gap is the recoverable part — those are the cases where the right answer was already in the candidate pool.</figcaption>
 </figure>
 </div>
@@ -61,7 +39,7 @@
 <p>The first instinct here is to enlarge the candidate pool. If the ranker can’t reliably find the right blob in a pool of 10, surely it can find it in a pool of 100. So I built a peak-based candidate generator with intensity ranking and swept <code>N</code>:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig2_n_vs_accuracy.png" class="img-fluid figure-img"></p>
+<p><img src="https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/fig2_n_vs_accuracy.png" class="img-fluid figure-img"></p>
 <figcaption>Top-1 accuracy under intensity ranking as the candidate pool grows from N = 10 to N = 300. The curve never crosses the current pipeline’s oracle ceiling.</figcaption>
 </figure>
 </div>
@@ -74,7 +52,7 @@
 <p><strong>Intensity.</strong> The first thing you reach for. The pseudopupil shows up in the difference image; the difference image is bright where it shows up; therefore rank by brightness. The picture below is what intensity ranking gives you on a noisier specimen — the cyan plus is ground truth, the lime crosses are the top three peaks by intensity, and the yellow circle is the actual pseudopupil:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig3_specular_vs_real.png" class="img-fluid figure-img"></p>
+<p><img src="https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/fig3_specular_vs_real.png" class="img-fluid figure-img"></p>
 <figcaption>Top intensity peaks (lime, ranked 1–3) sit on saturation features. The real pseudopupil (yellow) is at intensity rank 3 in this image — in many specimens it sits past rank 20.</figcaption>
 </figure>
 </div>
@@ -93,14 +71,14 @@
 <p>This is the mechanism. Here it is on one <em>Aeshna</em> specimen:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig4_cross_view_trajectory.png" class="img-fluid figure-img"></p>
+<p><img src="https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/fig4_cross_view_trajectory.png" class="img-fluid figure-img"></p>
 <figcaption>Picked group (green) vs runner-up group (cyan) across S0–S4. The picked group migrates smoothly. The runner-up jumps roughly 580 px between adjacent views — characteristic of a specular artefact whose image position isn’t tied to a stable 3-D point.</figcaption>
 </figure>
 </div>
 <p>Plotting the same two trajectories in raw image coordinates makes the difference even cleaner:</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig4b_trajectory_overlay.png" class="img-fluid figure-img"></p>
+<p><img src="https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/fig4b_trajectory_overlay.png" class="img-fluid figure-img"></p>
 <figcaption>The same two groups in image coordinates. The picked-group trajectory traces a tight, near-linear path; the runner-up positions look effectively independent across views. This is the structural property the scoring stage is currently failing to exploit.</figcaption>
 </figure>
 </div>
@@ -113,7 +91,7 @@
 <p>The direction came out exactly backwards.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/fig5_appearance_cv.png" class="img-fluid figure-img"></p>
+<p><img src="https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/fig5_appearance_cv.png" class="img-fluid figure-img"></p>
 <figcaption>Cross-view area CV on the 14 RANK-failure specimens. Wrong (saturation-driven) groups have low CV; oracle groups have high CV.</figcaption>
 </figure>
 </div>
@@ -136,30 +114,9 @@
   <category>computer-vision</category>
   <category>diagnostic</category>
   <category>small-data</category>
-  <guid>https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/</guid>
-  <pubDate>Sat, 02 May 2026 16:00:00 GMT</pubDate>
-  <media:content url="https://jujuliaa12.github.io/blog/posts/postspseudopupil-ranking-diagnostic/thumbnail.png" medium="image" type="image/png" height="144" width="144"/>
-</item>
-<item>
-  <title>Welcome To My Blog</title>
-  <dc:creator>Tristan O&#39;Malley</dc:creator>
-  <link>https://jujuliaa12.github.io/blog/posts/welcome/</link>
-  <description><![CDATA[ 
-
-
-
-
-
-<p>This is the first post in a Quarto blog. Welcome!</p>
-<p><img src="https://jujuliaa12.github.io/blog/posts/welcome/thumbnail.jpg" class="img-fluid"></p>
-<p>Since this post doesn’t specify an explicit <code>image</code>, the first image in the post will be used in the listing page of posts.</p>
-
-
-
- ]]></description>
-  <category>news</category>
-  <guid>https://jujuliaa12.github.io/blog/posts/welcome/</guid>
-  <pubDate>Wed, 29 Apr 2026 16:00:00 GMT</pubDate>
+  <guid>https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/</guid>
+  <pubDate>Sun, 03 May 2026 00:00:00 GMT</pubDate>
+  <media:content url="https://jujuliaa12.github.io/blog/posts/pseudopupil-ranking-diagnostic/thumbnail.png" medium="image" type="image/png" height="144" width="144"/>
 </item>
 </channel>
 </rss>
