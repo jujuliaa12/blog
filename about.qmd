@@ -1,6 +1,9 @@
 ---
-title: "About"
+title: "Julia Tseng"
 subtitle: "AI Solutions Engineer · Software Validation Engineer"
+# title 是側欄顯示用的，pagetitle 才是瀏覽器分頁／搜尋結果的標題。
+# 不設 pagetitle 的話分頁會變成「Julia Tseng – Julia Tseng」。
+pagetitle: "About"
 image: profile.jpg
 about:
   # trestles = 左欄頭像/連結 + 右欄靠左對齊正文，適合較長的自介。
@@ -21,9 +24,9 @@ about:
     #   href: https://bsky.app/profile/你的帳號
 ---
 
-Hi, I'm Julia Tseng, a computer science graduate from the University
-of Adelaide working across **artificial intelligence, machine learning,
-software engineering, and software validation**.
+A computer science graduate from the University of Adelaide, working
+across **artificial intelligence, machine learning, software
+engineering, and software validation**.
 
 My work spans both research and applied engineering. I have worked on
 projects involving **computer vision, biomedical image analysis,

@@ -11,7 +11,10 @@ website:
   title: "Julia Tseng"
   navbar:
     right:
-      - about.qmd
+      # about.qmd 的 title 是「Julia Tseng」（給側欄用的），
+      # 這裡要明確指定 text，否則導覽列會跟著顯示名字。
+      - text: "About"
+        href: about.qmd
       - icon: github
         href: https://github.com/jujuliaa12
       # 填上真實網址後把註解取消
