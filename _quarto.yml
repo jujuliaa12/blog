@@ -1,10 +1,13 @@
 project:
   type: website
+  # gh-pages 每次發佈都是強制覆寫，CNAME 必須跟著 render 進 _site/，
+  # 否則自訂網域設定會被沖掉。
+  resources:
+    - CNAME
 
 website:
   description: "A blog built with Quarto"
-  # Update if your GitHub repo isn't named "blog" or your username differs.
-  site-url: https://jujuliaa12.github.io/blog/
+  site-url: https://blog.judayori.com/
   title: "myblog"
   navbar:
     right:
