@@ -21,7 +21,7 @@ about:
     #   href: https://bsky.app/profile/你的帳號
 ---
 
-Hi, I'm Yu-Hsuan Tseng, a computer science graduate from the University
+Hi, I'm Julia Tseng, a computer science graduate from the University
 of Adelaide working across **artificial intelligence, machine learning,
 software engineering, and software validation**.
 
