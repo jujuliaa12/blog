@@ -1,5 +1,5 @@
 ---
-title: "Julia Tseng"
+title: "notes.judayori"
 listing:
   contents: posts
   feed: true

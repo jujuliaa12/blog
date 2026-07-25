@@ -8,8 +8,11 @@ project:
 website:
   description: "Diagnostic notes on computer vision in small-data regimes — what breaks, why, and what the failure tells you that more capacity won't."
   site-url: https://blog.judayori.com/
-  title: "Julia Tseng"
+  title: "notes.judayori"
+  favicon: logo.svg
   navbar:
+    logo: logo.svg
+    logo-alt: "一隻戴眼鏡、在筆電前學寫程式的柴犬"
     right:
       # about.qmd 的 title 是「Julia Tseng」（給側欄用的），
       # 這裡要明確指定 text，否則導覽列會跟著顯示名字。
