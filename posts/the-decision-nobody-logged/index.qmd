@@ -1,0 +1,452 @@
+---
+title: "The decision that became the architecture didn't look like a decision"
+subtitle: "An audit of a dual-output project: what made a three-month-later requirement cost two lines, and why nobody wrote it down as a choice"
+author: "Julia Tseng"
+date: "2026-07-26"
+categories: [architecture, abstraction, retrospective]
+image: blog-figures/seam-scattered-vs-centred.svg
+image-alt: "左右兩張對照圖：散落的分岔 vs 單一分岔點，分支數量相同"
+format:
+  html:
+    toc: true
+    code-fold: show
+---
+
+## The sound of interest being paid
+
+Three months into this project, I read through the existing code and
+the first thing I said to my collaborator was:
+
+> `resolvePhotoUrl` is already the single branch point between the two
+> targets, so that part of the pipeline is less invasive than you're
+> expecting.
+
+That sentence is a payment landing in an account. What neither of us
+knew at the time was when the principal had been deposited, or that
+depositing it had never felt like a deposit. It also never made it into
+the decision log — but that part took me longer to notice than it
+should have.
+
+The project is a letters system. One MDX file has to become two
+things: a web page, and an email. That's the stated technical core —
+one source, two renderers, and a parity test that fails if they drift.
+
+Three months ago the two targets differed in exactly one way: email
+needs absolute URLs, web needs relative ones. Then the second
+difference arrived. Photos should always render as monochrome plates,
+and email clients don't support CSS filters, so the web target can do
+it with a filter and the email target has to have it burned into the
+pixels.
+
+The interesting question was never "how do I implement monochrome."
+It was: *a list of differences that will keep growing — where should
+it be allowed to live?*
+
+## Why the obvious fix is worse than it looks
+
+The natural way to write this is to check the target at each place a
+photo gets rendered. That isn't laziness; it's a local optimum. Each
+site needs one `if`, and the diff at each site is as small as a diff
+can be.
+
+The cost doesn't come from line count. It comes from the filename
+having two definitions. The generator writes out
+`window.plate-v1.jpg`. The email renderer, under the scattered
+approach, builds that same string itself.
+
+Now bump the recipe version on either side. Every photo in the email
+is a broken image. And nothing fails beforehand — the build passes,
+the tests pass, local preview looks correct, because the old file is
+still sitting there on disk. The moment it breaks is *after the letter
+has landed in several dozen inboxes*, and a sent letter cannot be
+edited.
+
+That's the actual price of the scattered version. Not lines. It
+converts a compile-time problem into an irreversible shipping-time
+problem.
+
+![](blog-figures/seam-scattered-vs-centred.svg){fig-alt="Two diagrams
+side by side. Left, SCATTERED: five modules each branch on the render
+target and the filename is assembled by the consumers, with a red
+dashed line separating that string from the identical string the
+generator writes, labelled 'nothing forces these two to agree'. Right,
+ONE SEAM: the same five modules converge on resolvePhotoUrl, which
+takes its filename from plateSrc — the one definition the generator
+also uses."}
+
+## The commit where the seam appeared
+
+Here is the part I find genuinely uncomfortable.
+
+`lib/letters/urls.ts` was not created in advance, in anticipation of
+future variation. It was created in commit `70cfb5f`, titled *"render
+the same letter as email, with parity enforced"* — the very commit
+that introduced the second target. The seam wasn't dug ahead of time
+and left waiting. It was pulled out at the moment there was a second
+thing to pull it out of.
+
+This is what it looked like the day it was born:
+
+```ts
+/**
+ * Turn a manifest `src` into a URL the given target can actually load.
+ *
+ * The web page can use a root-relative path. Email cannot: there is no page
+ * for a relative src to be relative to.
+ *
+ * Both targets go through this one function so the two cannot drift apart.
+ *
+ * In Slice 1 the files live under `public/`. In Phase B `src` becomes a
+ * Supabase Storage path and only this function changes.
+ */
+export function resolvePhotoUrl(src: string, target: RenderTarget): string {
+  const path = `/${src.replace(/^\/+/, "")}`;
+  if (target === "web") return path;
+  return `${requireSiteUrl("render the email target")}${path}`;
+}
+```
+
+The middle paragraph is worth reading as a historical artifact: it is
+the entire difference between the two targets, as of that day, and it
+is one sentence long.
+
+Then read the last sentence. *"Only this function changes."* That
+prediction was written the day the function was written. Whoever wrote it knew they were establishing an invariant and
+knew what its scope was.
+
+What cashed the prediction three months later was not Supabase. It
+was the monochrome plate. The axis was right and the event was wrong —
+which is the whole point. The value came from naming the axis, not
+from forecasting what would travel down it.
+
+## Wiring the plate into the same seam
+
+Three options were on the table: add a separate `resolvePlateUrl()`,
+add a `variant` parameter, or make the email branch simply return the
+plate.
+
+I took the third. "Email wants the plate" isn't an option a caller
+picks — it's part of what the email target *means*. A caller that
+could ask for a non-plate photo on the email target would be a caller
+that can reintroduce the drift.
+
+One hard constraint: the filename has to come from `plateSrc()`, the
+same function the generator uses. Not for elegance. Because of the
+shipping-time disaster in the previous section.
+
+```ts
++import { plateSrc } from "@/lib/derive/plate";
+
+-  return `${requireSiteUrl("render the email target")}${path}`;
++  return `${requireSiteUrl("render the email target")}${plateSrc(path)}`;
+```
+
+The whole wiring change, commit `555eb17`:
+
+| File | +/− |
+|---|---|
+| `lib/letters/urls.ts` | +18 / −4 |
+| `lib/letters/format.test.ts` | +19 / −4 |
+| `docs/tech.md` | +9 / −2 |
+
+Two lines of production logic changed: one import, one return. The
+other 16 insertions in `urls.ts` are comments and a blank line. Zero
+MDX files touched,
+zero frontmatter schema changes, zero migrations.
+
+**That number is the cost of the wiring, not the cost of the
+feature.** "Photos are always monochrome plates" took six commits: the
+burn module, the recipe module, a ΔE measurement tool, a synthetic
+colour chart, the web-side CSS, and plate numbering. If I let the "two
+lines" figure stand alone, the first comment on this post would
+correctly call it a lie.
+
+What the seam saved was coordination cost, not implementation cost.
+The burn module still had to be written. What didn't have to happen
+was finding every place that needed to know which target it was
+rendering for, and getting all of them right.
+
+**How many places?** Only two actually emit an `<img>`, but six would
+have needed to know the target: `components/ui/Photo.tsx`,
+`lib/letters/components.email.tsx`, `lib/letters/components.web.tsx`,
+`lib/letters/frontmatter.ts` (which would almost certainly have grown
+a `plate_src` field), the migration that field implies, and
+`lib/letters/plaintext.ts`. ⚠️ That's my reconstruction from reading
+the code — it isn't recorded anywhere, and it's a counterfactual, so
+treat it as an estimate.
+
+And be honest about the scale: six sites, not sixty. This project is
+small enough that the line-count saving is minor. The real difference
+is in the *shape of the failure*, which is the next section.
+
+## `artifact.ts`, and how thin it actually is
+
+When font subsetting arrived, it shared a rule with the plate:
+the artifact's name is a pure function of (source, recipe), and a name
+is never reused for different bytes. So I pulled a module out.
+
+Here is everything the two users actually share:
+
+```ts
+export type ArtifactKind = "plate" | "serif";
+
+export function recipeTag(kind: ArtifactKind, version: number): string {
+  return `${kind}-v${version}`;
+}
+```
+
+That's it. About ten lines, counting the type and a version guard I've
+trimmed out of the snippet. My own audit of what I'd claimed this
+module gave me:
+
+| Claimed | Actually |
+|---|---|
+| shared naming | ✅ partly. `recipeTag()` is the only function both use; `insertBeforeExtension()` is plate-only |
+| shared hashing | ❌ backwards. `artifact.ts` deliberately excludes crypto; the subset needed it, so it got its own `lib/derive/hash.ts` |
+| shared existence checks | ⚠️ `coverage.test.ts` gained a second `describe` and a small `present()` helper fell out of it |
+| pre-send validation | ❌ neither has it; the docs say so explicitly, as a deliberate deferral |
+
+As code reuse, this is a bad trade — ten shared lines is early for an
+abstraction. What makes it worth keeping is that the rule now has a
+name and an address, so the next derived artifact has somewhere to go
+and read it. That is the value of documentation. I wrote it as code
+only because code doesn't go stale.
+
+## One rule, two strengths — and I flattened them anyway
+
+The plate must never be overwritten, and the reason is hard: that URL
+is inside letters that have already been sent, and Gmail caches it
+again behind its own image proxy. Overwriting it means silently
+editing old mail in someone else's inbox.
+
+The font subset has none of that property. Email can't load webfonts
+at all, so only the web fetches the subset, and the web can be pointed
+at a new file whenever I like.
+
+I applied the same never-overwrite rule to both. Not because the
+second case needs it, but because one rule that always holds is
+cheaper than two rules that each mostly hold. That's a trade, not a
+deduction, and I want it on the record as a trade.
+
+Where the analogy gets thinner: a photo doesn't change after upload,
+so the plate filename only needs the recipe version. A letter's text
+changes on every edit, so the subset filename additionally needs a
+content hash. Around here, "the second instance of the same concept"
+stops being a fair description of what's going on.
+
+## The mechanism
+
+The set of differences between two output targets is monotonically
+growing. Today it's URL form. Tomorrow it's image processing. After
+that it's fonts, then responsive sizes, then signed URLs.
+
+Scattered, every new member of that set requires finding every site.
+Miss one and the failure mode is a silent inconsistency, not a
+compiler error.
+
+Centralised, "find every site" is done once, permanently. The cost of
+a new member drops from O(number of sites) to O(1). And the type
+system starts helping: `RenderTarget = "web" | "email"` is a closed
+set, so adding a branch makes the compiler point at the case you
+didn't handle.
+
+It isn't free. That function becomes a small knowledge centre — it has
+to know plate naming, the site URL, and eventually Storage signing.
+It's just cheaper than the alternative.
+
+## The counterintuitive part: the seam was right and the two sides still run different maths
+
+The web applies a CSS filter. Email has the effect burned into pixels
+by `sharp`. Same recipe constants, same seam. That part worked.
+
+I was going to use sharp's `.greyscale()`. Reading the spec, it turns
+out that isn't the same operation as CSS `grayscale()` — the CSS
+filter shorthands are specified to operate in sRGB, while libvips does
+its own colourspace conversion. So I derived the matrix myself:
+
+```ts
+sharp(input)
+  .pipelineColourspace("srgb")       // CSS filters are specified in sRGB, not linear light
+  .rotate()                          // bake EXIF orientation in before metadata is dropped
+  .recomb(matrix)                    // grayscale × sepia, composed
+  .linear(slope, intercept * 255)    // contrast; sharp works 0–255, the spec 0–1
+```
+
+But a derivation isn't a measurement, so I built a measurement tool:
+run the canvas filter, run the sharp output, compare pixel by pixel in
+ΔE00. The agreed thresholds were mean ≤ 1.5 and p95 ≤ 3.0.
+
+**The first run passed.** Within each photo, mean, p95 and max came
+back as the same number:
+
+| fixture | mean | p95 | max |
+|---|---|---|---|
+| `window.jpg` | 0.4607 | 0.4600 | 0.4607 |
+| `tram.jpg` | 0.5591 | 0.5500 | 0.5591 |
+| `notebook.jpg` | 0.0000 | 0.0000 | 0.0000 |
+
+That isn't a coincidence, it's a tell. A distribution whose mean equals
+its maximum contains one value. The fixtures were flat-colour
+placeholders, so each image contributed exactly one colour: three
+colours sampled, across three million pixels.
+
+We had agreed on a rule for this project: *stop when the threshold is
+met.* By that rule I should have stopped there. I didn't. I built a
+synthetic colour chart covering 262,144 colours and re-ran it: mean
+**0.4495**, p95 **1.1900**, max **1.8209**. Sharp lands within 1/255
+per channel of the spec reference values before JPEG encoding.
+
+The lesson isn't "test more." It's that **"stop when green" is a good
+rule that silently assumes the measurement is valid.** Had I followed
+it, the central evidence in this post would be fabricated — not
+falsified, just meaningless.
+
+One more thing fell out while I was in there. Adjusting the font stack
+along the same seam, I found two sans-serif families sitting inside
+`FONT_SERIF` — and the one Windows resolved to was one of them. "The
+letter body is serif" had never once been true on Windows. A good
+abstraction boundary is also a developing agent for bugs that were
+already there.
+
+Current state of the whole thing: 22 files, 225 tests. The Noto source
+font is 16,851,596 bytes; a fixture subset covering 153 distinct
+characters is 54.0 KB; the two preloaded Courier Prime weights are
+22,780 bytes. ⚠️ One number I can't stand behind: the subset size
+slope (≈1.4 KB + 0.345 KB per character, from 6 points) was measured
+against temporary samples that have since been deleted, and can't be
+reproduced from the repo as it stands.
+
+## The strongest argument against my own claim
+
+Here's the awkward part, and I'd rather write it than let a reader
+find it.
+
+I keep a decision log for this project. It has 72 rows. Not one of
+them mentions `resolvePhotoUrl`, the single branch point, or the two
+targets. Twenty-six rows were written on 2026-07-24 — the same day
+that function was born — including entries at this level of
+consequence:
+
+> Use gray-matter for frontmatter. Rationale: boring and standard;
+> hand-rolling 30 lines of YAML handling isn't worth owning.
+
+<table class="decision-log">
+  <caption>Decision log · 2026-07-24 · 26 entries</caption>
+  <tbody>
+    <tr><td>09</td><td>gray-matter for frontmatter</td></tr>
+    <tr><td>15</td><td><code>&lt;Photo&gt;</code> carries only <code>src</code>; alt and dimensions come from the manifest</td></tr>
+    <tr><td>19</td><td>Dates are formatted by slicing the ISO string, never via <code>new Date</code></td></tr>
+    <tr><td>21</td><td>Noted: React SSR emits <code>&lt;!-- --&gt;</code> between adjacent text nodes</td></tr>
+    <tr><td>24</td><td>The email postmark is not rotated, unlike the web one</td></tr>
+    <tr><td>25</td><td>Photos are absent from the plain-text alternative</td></tr>
+    <tr class="absent"><td>—</td><td>Both targets go through one function, so the two cannot drift apart</td></tr>
+  </tbody>
+</table>
+
+<p class="decision-log-note">never recorded as a decision — it lives only in a comment above the function</p>
+
+<p class="decision-log-total">72 rows in the log · 0 mention it</p>
+
+Look at rows 15, 24 and 25. Those are decisions about photo props,
+about the email postmark rendering differently from the web one, about
+photos being absent from the plain-text alternative. The log was not
+blind to this territory that day. It recorded three consequences of
+the split between the two targets, and not the mechanism that makes
+the split safe to have.
+
+The easy version of this story is "nobody thought of it." That version
+is false. The invariant *was* written down. It was written down
+directly above the function it governs, on the day that function was
+created, complete with its scope.
+
+And there's a good argument that this is the correct place. Anyone
+editing that function is guaranteed to read it. Nobody reads row 47 of
+a decision log. On that reading, the absence isn't a failure at all —
+it's correct division of labour, and my headline is just a person
+being hard on themselves about note-taking.
+
+So the real question isn't "why wasn't it logged." It's: **which
+decisions need to exist in two places at once?**
+
+My current answer: when violating the invariant produces its
+consequence in a *different file*. The comment above `resolvePhotoUrl`
+governs `resolvePhotoUrl` perfectly well. It has no reach at all over
+someone, three months later, assembling a filename by hand inside
+`components.email.tsx`.
+
+I have evidence that this failure mode is real, because I nearly
+committed it myself. Building plate numbering, my first version put
+`plateLabel()` in `components/ui/Photo.tsx` and imported it from the
+email side — which would have dragged `next/image` into the email
+module graph. What stopped me was a comment written three months
+earlier in `frontmatter.ts`. A seam doesn't hold itself open once
+drawn; it's held by a chain of comments, and the chain is only as long
+as someone happened to make it.
+
+I'm not going to resolve this section. Leaving it open is worth more
+than settling it.
+
+## What this leaves
+
+**Locally**, there's a falsifiable prediction. This seam has three
+more trips I expect it to take: the Phase B Storage path (predicted
+the day it was born, still hasn't happened), responsive sizes, and
+signed URLs. Each of those should touch `resolvePhotoUrl` and nothing
+else. If any of them doesn't, the seam is in the wrong place, and I'd
+rather have written that down in advance.
+
+**More broadly**, five things I'd carry to the next project:
+
+1. **You don't need to predict the third requirement.** You only need
+   to not solve the second one with copy-paste. The second occurrence
+   is the cheapest moment there is — the difference is concrete
+   already, and there are still only two sites to change.
+2. **Ask whether the list will get longer, not whether the
+   differences are numerous.** One difference on a growing axis beats
+   five on a closed one.
+3. **Check whether the axis has a name.** This project's did:
+   `RenderTarget`. A named axis is an axis you can close, and a closed
+   union is an axis the compiler will police.
+4. **Look at the failure shape.** If scattering produces silent
+   inconsistency rather than a compile error, the seam is worth an
+   order of magnitude more than the line count suggests.
+5. **Then write it somewhere it will actually be read** — which is the
+   one I didn't do.
+
+## What this post is not evidence of
+
+Three things are still open, and the numbers above shouldn't be read
+as covering them.
+
+**The seam has never been verified on the email side for real.** I've
+checked that the URLs return 200, that the payload is within budget,
+and that the filenames are correct. No letter has ever actually been
+sent.
+
+**Every measurement here sits on placeholder content.** Three
+flat-colour images, one 352-character fixture letter, and five temporary
+samples that no longer exist. Not one real photograph, not one
+real-length letter.
+
+**"One design, two implementations" isn't solved, only suppressed.**
+Web does CSS filters, email does a burned file, and those can drift
+forever. The alternative recorded in the docs — have the web load the
+burned plate too — would guarantee consistency, at the cost of a
+second network round trip before the image appears. I chose the one
+that can drift and pinned it down with ΔE measurement. That's
+consistency bought with tests, not consistency by construction.
+
+---
+
+*Code is on [GitHub](https://github.com/jujuliaa12/judayori). Tools and specs
+referenced above: [sharp](https://sharp.pixelplumbing.com),
+[subset-font](https://www.npmjs.com/package/subset-font),
+[harfbuzz](https://harfbuzz.github.io), W3C Filter Effects Level 1
+(the matrix definitions for `grayscale()` / `sepia()` / `contrast()`
+and their sRGB operating space), and Sharma, Wu & Dalal, "The CIEDE2000
+Color-Difference Formula," Color Research & Application 30(1), 2005.*
+
+*The general form of this argument is fifty-four years old: D. L.
+Parnas, "On the Criteria To Be Used in Decomposing Systems into
+Modules," CACM 15(12), 1972 — module boundaries should follow the
+decisions likely to change, not the steps of the process.*

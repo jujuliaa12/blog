@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 456" width="900" height="456" role="img" aria-labelledby="t d">
+  <title id="t">The decision log on the day the seam was created</title>
+  <desc id="d">Six real entries from the twenty-six decisions recorded on 2026-07-24, including one about the photo component's props and one about a web-versus-email divergence in the postmark. The decision that established the single branch point between the two targets is shown as an empty outlined row: it was never recorded. Across all seventy-two rows of the log, none mention it.</desc>
+
+  <style>
+    svg {
+      --ink: #262119;
+      --soft: #5a5342;
+      --rule: #7d735c;
+      --red: #b23a26;
+      --fill: rgba(38, 33, 25, 0.07);
+    }
+    @media (prefers-color-scheme: dark) {
+      svg {
+        --ink: #eee8da;
+        --soft: #b8ae97;
+        --rule: #8f866f;
+        --red: #ff7a60;
+        --fill: rgba(230, 224, 210, 0.09);
+      }
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .hd { font-size: 12.5px; letter-spacing: 0.18em; fill: var(--soft); }
+    .row { font-size: 13.5px; fill: var(--ink); }
+    .num { font-size: 12px; fill: var(--soft); }
+    .note { font-size: 12.5px; fill: var(--red); }
+    .cap { font-size: 11.5px; fill: var(--soft); letter-spacing: 0.04em; }
+    .tick { fill: var(--soft); }
+    .ghost { fill: none; stroke: var(--red); stroke-width: 2; stroke-dasharray: 5 4; }
+    .rule { stroke: var(--rule); stroke-width: 1.25; }
+    .major { stroke: var(--ink); stroke-width: 2; }
+  </style>
+
+  <text class="mono hd" x="24" y="24">DECISION LOG · 2026-07-24 · 26 ENTRIES</text>
+  <line class="major" x1="24" y1="36" x2="876" y2="36"/>
+
+  <!-- recorded rows -->
+  <g class="mono">
+    <rect class="tick" x="24" y="58" width="7" height="7"/>
+    <text class="num" x="44" y="65">09</text>
+    <text class="row" x="76" y="65">gray-matter for frontmatter</text>
+    <line class="rule" x1="24" y1="80" x2="876" y2="80"/>
+
+    <rect class="tick" x="24" y="98" width="7" height="7"/>
+    <text class="num" x="44" y="105">15</text>
+    <text class="row" x="76" y="105">&lt;Photo&gt; carries only src; alt and dimensions come from the manifest</text>
+    <line class="rule" x1="24" y1="120" x2="876" y2="120"/>
+
+    <rect class="tick" x="24" y="138" width="7" height="7"/>
+    <text class="num" x="44" y="145">19</text>
+    <text class="row" x="76" y="145">Dates are formatted by slicing the ISO string, never via new Date</text>
+    <line class="rule" x1="24" y1="160" x2="876" y2="160"/>
+
+    <rect class="tick" x="24" y="178" width="7" height="7"/>
+    <text class="num" x="44" y="185">21</text>
+    <text class="row" x="76" y="185">Noted: React SSR emits &lt;!-- --&gt; between adjacent text nodes</text>
+    <line class="rule" x1="24" y1="200" x2="876" y2="200"/>
+
+    <rect class="tick" x="24" y="218" width="7" height="7"/>
+    <text class="num" x="44" y="225">24</text>
+    <text class="row" x="76" y="225">The email postmark is not rotated, unlike the web one</text>
+    <line class="rule" x1="24" y1="240" x2="876" y2="240"/>
+
+    <rect class="tick" x="24" y="258" width="7" height="7"/>
+    <text class="num" x="44" y="265">25</text>
+    <text class="row" x="76" y="265">Photos are absent from the plain-text alternative</text>
+    <line class="rule" x1="24" y1="280" x2="876" y2="280"/>
+  </g>
+
+  <!-- the absent row -->
+  <rect class="ghost" x="24" y="298" width="852" height="34"/>
+  <text class="mono note" x="76" y="320">Both targets go through one function, so the two cannot drift apart</text>
+  <text class="mono note" x="44" y="320">—</text>
+
+  <text class="mono note" x="24" y="356">never recorded as a decision — it lives only in a comment above the function</text>
+
+  <line class="major" x1="24" y1="382" x2="876" y2="382"/>
+  <text class="mono hd" x="24" y="404">72 ROWS IN THE LOG · 0 MENTION IT</text>
+
+  <text class="mono cap" x="24" y="424">Rows 15, 24 and 25 are decisions about photos and about web/email divergence.</text>
+  <text class="mono cap" x="24" y="442">The mechanism governing all of them is the missing one.</text>
+</svg>

@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 478" width="900" height="478" role="img" aria-labelledby="t d">
+  <title id="t">Scattered target branching versus a single seam</title>
+  <desc id="d">On the left, five modules each branch on the render target and each builds the plate filename themselves, with nothing connecting them to the generator that writes the file. On the right, all five go through one function, and both that function and the generator take the filename from plateSrc.</desc>
+
+  <style>
+    svg {
+      --ink: #262119;
+      --soft: #5a5342;
+      --rule: #7d735c;
+      --red: #b23a26;
+      --fill: rgba(38, 33, 25, 0.07);
+    }
+    /* 站台只有淺色主題，所以這裡不放 prefers-color-scheme。
+       深色模式的讀者原本會拿到淺色字配白底頁面。 */
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .hd { font-size: 13.5px; letter-spacing: 0.18em; fill: var(--ink); }
+    .lbl { font-size: 12.5px; fill: var(--ink); }
+    .dim { font-size: 12px; fill: var(--soft); }
+    .warn { font-size: 12.5px; fill: var(--red); }
+    .cap { font-size: 12px; fill: var(--soft); letter-spacing: 0.04em; }
+    .box { fill: var(--fill); stroke: var(--rule); stroke-width: 1.25; }
+    .seam { fill: none; stroke: var(--ink); stroke-width: 2; }
+    .wire { fill: none; stroke: var(--rule); stroke-width: 1.25; }
+    .cut { fill: none; stroke: var(--red); stroke-width: 2; stroke-dasharray: 5 5; }
+  </style>
+
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="var(--rule)"/>
+    </marker>
+  </defs>
+
+  <!-- ================= LEFT : SCATTERED ================= -->
+  <text class="mono hd" x="24" y="26">SCATTERED</text>
+  <line class="wire" x1="24" y1="38" x2="410" y2="38"/>
+
+  <g class="mono">
+    <rect class="box" x="24" y="58" width="196" height="26" rx="0"/>
+    <text class="lbl" x="34" y="75">components.email.tsx</text>
+    <text class="dim" x="230" y="75">if (target)</text>
+
+    <rect class="box" x="24" y="92" width="196" height="26"/>
+    <text class="lbl" x="34" y="109">components.web.tsx</text>
+    <text class="dim" x="230" y="109">if (target)</text>
+
+    <rect class="box" x="24" y="126" width="196" height="26"/>
+    <text class="lbl" x="34" y="143">Photo.tsx</text>
+    <text class="dim" x="230" y="143">if (target)</text>
+
+    <rect class="box" x="24" y="160" width="196" height="26"/>
+    <text class="lbl" x="34" y="177">frontmatter.ts</text>
+    <text class="dim" x="230" y="177">plate_src?</text>
+
+    <rect class="box" x="24" y="194" width="196" height="26"/>
+    <text class="lbl" x="34" y="211">plaintext.ts</text>
+    <text class="dim" x="230" y="211">if (target)</text>
+  </g>
+
+  <!-- filename built by the consumers -->
+  <path class="wire" d="M120 226 L120 254" marker-end="url(#a)"/>
+  <g class="mono">
+    <rect class="box" x="24" y="258" width="240" height="28"/>
+    <text class="lbl" x="34" y="277">"window.plate-v1.jpg"</text>
+  </g>
+
+  <!-- the gap -->
+  <line class="cut" x1="24" y1="318" x2="380" y2="318"/>
+  <text class="mono warn" x="24" y="338">nothing forces these two to agree</text>
+
+  <!-- generator -->
+  <g class="mono">
+    <rect class="box" x="24" y="356" width="240" height="28"/>
+    <text class="lbl" x="34" y="375">"window.plate-v1.jpg"</text>
+  </g>
+  <path class="wire" d="M120 420 L120 390" marker-end="url(#a)"/>
+  <g class="mono">
+    <rect class="box" x="24" y="424" width="196" height="26"/>
+    <text class="lbl" x="34" y="441">derive.mts</text>
+  </g>
+
+  <!-- divider -->
+  <line class="wire" x1="450" y1="20" x2="450" y2="450"/>
+
+  <!-- ================= RIGHT : ONE SEAM ================= -->
+  <text class="mono hd" x="486" y="26">ONE SEAM</text>
+  <line class="wire" x1="486" y1="38" x2="876" y2="38"/>
+
+  <g class="mono">
+    <rect class="box" x="486" y="58" width="196" height="26"/>
+    <text class="lbl" x="496" y="75">components.email.tsx</text>
+
+    <rect class="box" x="486" y="92" width="196" height="26"/>
+    <text class="lbl" x="496" y="109">components.web.tsx</text>
+
+    <rect class="box" x="486" y="126" width="196" height="26"/>
+    <text class="lbl" x="496" y="143">Photo.tsx</text>
+
+    <rect class="box" x="486" y="160" width="196" height="26"/>
+    <text class="lbl" x="496" y="177">frontmatter.ts</text>
+    <text class="dim" x="692" y="177">unchanged</text>
+
+    <rect class="box" x="486" y="194" width="196" height="26"/>
+    <text class="lbl" x="496" y="211">plaintext.ts</text>
+  </g>
+
+  <!-- converge -->
+  <path class="wire" d="M682 71 L716 71 L716 268"/>
+  <path class="wire" d="M682 105 L706 105 L706 268"/>
+  <path class="wire" d="M682 139 L696 139 L696 268"/>
+  <path class="wire" d="M682 207 L726 207 L726 268"/>
+  <path class="wire" d="M584 226 L584 254" marker-end="url(#a)"/>
+
+  <g class="mono">
+    <rect class="seam" x="486" y="258" width="300" height="30"/>
+    <text class="lbl" x="496" y="278">resolvePhotoUrl(src, target)</text>
+  </g>
+
+  <path class="wire" d="M584 290 L584 352" marker-end="url(#a)"/>
+
+  <g class="mono">
+    <rect class="seam" x="486" y="356" width="240" height="28"/>
+    <text class="lbl" x="496" y="375">plateSrc()</text>
+    <text class="dim" x="740" y="375">one definition</text>
+  </g>
+
+  <path class="wire" d="M660 424 L660 390" marker-end="url(#a)"/>
+  <g class="mono">
+    <rect class="box" x="562" y="424" width="196" height="26"/>
+    <text class="lbl" x="572" y="441">derive.mts</text>
+  </g>
+
+  <text class="mono cap" x="24" y="470">Same number of branches on both sides. Only one side makes the two filenames impossible to disagree.</text>
+</svg>

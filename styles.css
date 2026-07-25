@@ -1,1 +1,77 @@
 /* css styles */
+
+/* ── 決策紀錄表（posts/the-decision-nobody-logged）────────────────────────
+   原本這段是一張 SVG。改成真的表格，是因為它的內容全部都是文字：
+   圖裡唯一在傳遞訊息的形狀只有那個虛線空框，而虛線空框用 CSS 一行就有。
+   換成表格之後文字可以被選取、被搜尋、被翻譯，進 RSS 不會壞，
+   螢幕閱讀器讀到的是內容本身而不是我寫的 alt。
+   顏色刻意跟 blog-figures/*.svg 用同一組，圖和表才像同一套東西。 */
+.decision-log {
+  --dl-red: #b23a26;
+  --dl-hair: rgba(38, 33, 25, 0.28);
+  width: 100%;
+  margin: 1.6rem 0 0.6rem;
+  border-collapse: collapse;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.decision-log caption {
+  caption-side: top;
+  padding: 0 0 0.45rem;
+  border-bottom: 2px solid currentColor;
+  color: inherit;
+  opacity: 0.75;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.decision-log td {
+  padding: 0.5rem 0.6rem 0.5rem 0;
+  border-bottom: 1px solid var(--dl-hair);
+  vertical-align: baseline;
+}
+
+/* 編號欄。保留 09/15/19/21/24/25 的原始編號，讀者才看得出來
+   這六列是從 26 列裡挑的，不是編出來的。 */
+.decision-log td:first-child {
+  width: 3.4em;
+  padding-left: 0.6rem;
+  opacity: 0.6;
+}
+
+.decision-log code {
+  font-size: inherit;
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+
+/* 那一列不存在的決定。虛線框橫跨兩欄，所以中間那道邊要拿掉。 */
+.decision-log tr.absent td {
+  border: 1.5px dashed var(--dl-red);
+  color: var(--dl-red);
+}
+
+.decision-log tr.absent td:first-child { border-right: none; }
+.decision-log tr.absent td:last-child { border-left: none; }
+
+.decision-log-note {
+  margin: 0.6rem 0 1.4rem;
+  color: #b23a26;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.decision-log-total {
+  margin: 0 0 1.6rem;
+  padding-top: 0.5rem;
+  border-top: 2px solid currentColor;
+  opacity: 0.75;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
