@@ -10,7 +10,558 @@
 <atom:link href="https://blog.judayori.com/index.xml" rel="self" type="application/rss+xml"/>
 <description>Diagnostic notes on computer vision in small-data regimes — what breaks, why, and what the failure tells you that more capacity won&#39;t.</description>
 <generator>quarto-1.10.18</generator>
-<lastBuildDate>Sun, 03 May 2026 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Sun, 26 Jul 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>The decision that became the architecture didn’t look like a decision</title>
+  <dc:creator>Julia Tseng</dc:creator>
+  <link>https://blog.judayori.com/posts/the-decision-nobody-logged/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<section id="the-sound-of-interest-being-paid" class="level2">
+<h2 class="anchored" data-anchor-id="the-sound-of-interest-being-paid">The sound of interest being paid</h2>
+<p>Three months into this project, I read through the existing code and the first thing I said to my collaborator was:</p>
+<blockquote class="blockquote">
+<p><code>resolvePhotoUrl</code> is already the single branch point between the two targets, so that part of the pipeline is less invasive than you’re expecting.</p>
+</blockquote>
+<p>That sentence is a payment landing in an account. What neither of us knew at the time was when the principal had been deposited, or that depositing it had never felt like a deposit. It also never made it into the decision log — but that part took me longer to notice than it should have.</p>
+<p>The project is a letters system. One MDX file has to become two things: a web page, and an email. That’s the stated technical core — one source, two renderers, and a parity test that fails if they drift.</p>
+<p>Three months ago the two targets differed in exactly one way: email needs absolute URLs, web needs relative ones. Then the second difference arrived. Photos should always render as monochrome plates, and email clients don’t support CSS filters, so the web target can do it with a filter and the email target has to have it burned into the pixels.</p>
+<p>The interesting question was never “how do I implement monochrome.” It was: <em>a list of differences that will keep growing — where should it be allowed to live?</em></p>
+</section>
+<section id="why-the-obvious-fix-is-worse-than-it-looks" class="level2">
+<h2 class="anchored" data-anchor-id="why-the-obvious-fix-is-worse-than-it-looks">Why the obvious fix is worse than it looks</h2>
+<p>The natural way to write this is to check the target at each place a photo gets rendered. That isn’t laziness; it’s a local optimum. Each site needs one <code>if</code>, and the diff at each site is as small as a diff can be.</p>
+<p>The cost doesn’t come from line count. It comes from the filename having two definitions. The generator writes out <code>window.plate-v1.jpg</code>. The email renderer, under the scattered approach, builds that same string itself.</p>
+<p>Now bump the recipe version on either side. Every photo in the email is a broken image. And nothing fails beforehand — the build passes, the tests pass, local preview looks correct, because the old file is still sitting there on disk. The moment it breaks is <em>after the letter has landed in several dozen inboxes</em>, and a sent letter cannot be edited.</p>
+<p>That’s the actual price of the scattered version. Not lines. It converts a compile-time problem into an irreversible shipping-time problem.</p>
+<p><img src="https://blog.judayori.com/posts/the-decision-nobody-logged/blog-figures/seam-scattered-vs-centred.svg" class="img-fluid" alt="Two diagrams side by side. Left, SCATTERED: five modules each branch on the render target and the filename is assembled by the consumers, with a red dashed line separating that string from the identical string the generator writes, labelled 'nothing forces these two to agree'. Right, ONE SEAM: the same five modules converge on resolvePhotoUrl, which takes its filename from plateSrc — the one definition the generator also uses."></p>
+</section>
+<section id="the-commit-where-the-seam-appeared" class="level2">
+<h2 class="anchored" data-anchor-id="the-commit-where-the-seam-appeared">The commit where the seam appeared</h2>
+<p>Here is the part I find genuinely uncomfortable.</p>
+<p><code>lib/letters/urls.ts</code> was not created in advance, in anticipation of future variation. It was created in commit <code>70cfb5f</code>, titled <em>“render the same letter as email, with parity enforced”</em> — the very commit that introduced the second target. The seam wasn’t dug ahead of time and left waiting. It was pulled out at the moment there was a second thing to pull it out of.</p>
+<p>This is what it looked like the day it was born:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode ts code-with-copy"><code class="sourceCode typescript"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">/**</span></span>
+<span id="cb1-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> * Turn a manifest `src` into a URL the given target can actually load.</span></span>
+<span id="cb1-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> *</span></span>
+<span id="cb1-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> * The web page can use a root-relative path. Email cannot: there is no page</span></span>
+<span id="cb1-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> * for a relative src to be relative to.</span></span>
+<span id="cb1-6"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> *</span></span>
+<span id="cb1-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> * Both targets go through this one function so the two cannot drift apart.</span></span>
+<span id="cb1-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> *</span></span>
+<span id="cb1-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> * In Slice 1 the files live under `public/`. In Phase B `src` becomes a</span></span>
+<span id="cb1-10"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> * Supabase Storage path and only this function changes.</span></span>
+<span id="cb1-11"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"> */</span></span>
+<span id="cb1-12"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">export</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">resolvePhotoUrl</span>(src<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">string</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> target<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> RenderTarget)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">string</span> {</span>
+<span id="cb1-13">  <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> path <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`/</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">${</span>src<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">replace</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">/</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">^\/+</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">/</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">""</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-14">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> (target <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">===</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"web"</span>) <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> path<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-15">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">${</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">requireSiteUrl</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"render the email target"</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}${</span>path<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-16">}</span></code></pre></div></div>
+<p>The middle paragraph is worth reading as a historical artifact: it is the entire difference between the two targets, as of that day, and it is one sentence long.</p>
+<p>Then read the last sentence. <em>“Only this function changes.”</em> That prediction was written the day the function was written. Whoever wrote it knew they were establishing an invariant and knew what its scope was.</p>
+<p>What cashed the prediction three months later was not Supabase. It was the monochrome plate. The axis was right and the event was wrong — which is the whole point. The value came from naming the axis, not from forecasting what would travel down it.</p>
+</section>
+<section id="wiring-the-plate-into-the-same-seam" class="level2">
+<h2 class="anchored" data-anchor-id="wiring-the-plate-into-the-same-seam">Wiring the plate into the same seam</h2>
+<p>Three options were on the table: add a separate <code>resolvePlateUrl()</code>, add a <code>variant</code> parameter, or make the email branch simply return the plate.</p>
+<p>I took the third. “Email wants the plate” isn’t an option a caller picks — it’s part of what the email target <em>means</em>. A caller that could ask for a non-plate photo on the email target would be a caller that can reintroduce the drift.</p>
+<p>One hard constraint: the filename has to come from <code>plateSrc()</code>, the same function the generator uses. Not for elegance. Because of the shipping-time disaster in the previous section.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode ts code-with-copy"><code class="sourceCode typescript"><span id="cb2-1"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> { plateSrc } <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"@/lib/derive/plate"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb2-2"></span>
+<span id="cb2-3"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">${</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">requireSiteUrl</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"render the email target"</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}${</span>path<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb2-4"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span>  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">${</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">requireSiteUrl</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"render the email target"</span>)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}${</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plateSrc</span>(path)<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span></code></pre></div></div>
+<p>The whole wiring change, commit <code>555eb17</code>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>File</th>
+<th>+/−</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>lib/letters/urls.ts</code></td>
+<td>+18 / −4</td>
+</tr>
+<tr class="even">
+<td><code>lib/letters/format.test.ts</code></td>
+<td>+19 / −4</td>
+</tr>
+<tr class="odd">
+<td><code>docs/tech.md</code></td>
+<td>+9 / −2</td>
+</tr>
+</tbody>
+</table>
+<p>Two lines of production logic changed: one import, one return. The other 16 insertions in <code>urls.ts</code> are comments and a blank line. Zero MDX files touched, zero frontmatter schema changes, zero migrations.</p>
+<p><strong>That number is the cost of the wiring, not the cost of the feature.</strong> “Photos are always monochrome plates” took six commits: the burn module, the recipe module, a ΔE measurement tool, a synthetic colour chart, the web-side CSS, and plate numbering. If I let the “two lines” figure stand alone, the first comment on this post would correctly call it a lie.</p>
+<p>What the seam saved was coordination cost, not implementation cost. The burn module still had to be written. What didn’t have to happen was finding every place that needed to know which target it was rendering for, and getting all of them right.</p>
+<p><strong>How many places?</strong> Only two actually emit an <code>&lt;img&gt;</code>, but six would have needed to know the target: <code>components/ui/Photo.tsx</code>, <code>lib/letters/components.email.tsx</code>, <code>lib/letters/components.web.tsx</code>, <code>lib/letters/frontmatter.ts</code> (which would almost certainly have grown a <code>plate_src</code> field), the migration that field implies, and <code>lib/letters/plaintext.ts</code>. ⚠️ That’s my reconstruction from reading the code — it isn’t recorded anywhere, and it’s a counterfactual, so treat it as an estimate.</p>
+<p>And be honest about the scale: six sites, not sixty. This project is small enough that the line-count saving is minor. The real difference is in the <em>shape of the failure</em>, which is the next section.</p>
+</section>
+<section id="artifact.ts-and-how-thin-it-actually-is" class="level2">
+<h2 class="anchored" data-anchor-id="artifact.ts-and-how-thin-it-actually-is"><code>artifact.ts</code>, and how thin it actually is</h2>
+<p>When font subsetting arrived, it shared a rule with the plate: the artifact’s name is a pure function of (source, recipe), and a name is never reused for different bytes. So I pulled a module out.</p>
+<p>Here is everything the two users actually share:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode ts code-with-copy"><code class="sourceCode typescript"><span id="cb3-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">export type</span> ArtifactKind <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"plate"</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"serif"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb3-2"></span>
+<span id="cb3-3"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">export</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">recipeTag</span>(kind<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> ArtifactKind<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> version<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">number</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">string</span> {</span>
+<span id="cb3-4">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">${</span>kind<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">-v</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">${</span>version<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="vs" style="color: #20794D;
+background-color: null;
+font-style: inherit;">`</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb3-5">}</span></code></pre></div></div>
+<p>That’s it. About ten lines, counting the type and a version guard I’ve trimmed out of the snippet. My own audit of what I’d claimed this module gave me:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Claimed</th>
+<th>Actually</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>shared naming</td>
+<td>✅ partly. <code>recipeTag()</code> is the only function both use; <code>insertBeforeExtension()</code> is plate-only</td>
+</tr>
+<tr class="even">
+<td>shared hashing</td>
+<td>❌ backwards. <code>artifact.ts</code> deliberately excludes crypto; the subset needed it, so it got its own <code>lib/derive/hash.ts</code></td>
+</tr>
+<tr class="odd">
+<td>shared existence checks</td>
+<td>⚠️ <code>coverage.test.ts</code> gained a second <code>describe</code> and a small <code>present()</code> helper fell out of it</td>
+</tr>
+<tr class="even">
+<td>pre-send validation</td>
+<td>❌ neither has it; the docs say so explicitly, as a deliberate deferral</td>
+</tr>
+</tbody>
+</table>
+<p>As code reuse, this is a bad trade — ten shared lines is early for an abstraction. What makes it worth keeping is that the rule now has a name and an address, so the next derived artifact has somewhere to go and read it. That is the value of documentation. I wrote it as code only because code doesn’t go stale.</p>
+</section>
+<section id="one-rule-two-strengths-and-i-flattened-them-anyway" class="level2">
+<h2 class="anchored" data-anchor-id="one-rule-two-strengths-and-i-flattened-them-anyway">One rule, two strengths — and I flattened them anyway</h2>
+<p>The plate must never be overwritten, and the reason is hard: that URL is inside letters that have already been sent, and Gmail caches it again behind its own image proxy. Overwriting it means silently editing old mail in someone else’s inbox.</p>
+<p>The font subset has none of that property. Email can’t load webfonts at all, so only the web fetches the subset, and the web can be pointed at a new file whenever I like.</p>
+<p>I applied the same never-overwrite rule to both. Not because the second case needs it, but because one rule that always holds is cheaper than two rules that each mostly hold. That’s a trade, not a deduction, and I want it on the record as a trade.</p>
+<p>Where the analogy gets thinner: a photo doesn’t change after upload, so the plate filename only needs the recipe version. A letter’s text changes on every edit, so the subset filename additionally needs a content hash. Around here, “the second instance of the same concept” stops being a fair description of what’s going on.</p>
+</section>
+<section id="the-mechanism" class="level2">
+<h2 class="anchored" data-anchor-id="the-mechanism">The mechanism</h2>
+<p>The set of differences between two output targets is monotonically growing. Today it’s URL form. Tomorrow it’s image processing. After that it’s fonts, then responsive sizes, then signed URLs.</p>
+<p>Scattered, every new member of that set requires finding every site. Miss one and the failure mode is a silent inconsistency, not a compiler error.</p>
+<p>Centralised, “find every site” is done once, permanently. The cost of a new member drops from O(number of sites) to O(1). And the type system starts helping: <code>RenderTarget = "web" | "email"</code> is a closed set, so adding a branch makes the compiler point at the case you didn’t handle.</p>
+<p>It isn’t free. That function becomes a small knowledge centre — it has to know plate naming, the site URL, and eventually Storage signing. It’s just cheaper than the alternative.</p>
+</section>
+<section id="the-counterintuitive-part-the-seam-was-right-and-the-two-sides-still-run-different-maths" class="level2">
+<h2 class="anchored" data-anchor-id="the-counterintuitive-part-the-seam-was-right-and-the-two-sides-still-run-different-maths">The counterintuitive part: the seam was right and the two sides still run different maths</h2>
+<p>The web applies a CSS filter. Email has the effect burned into pixels by <code>sharp</code>. Same recipe constants, same seam. That part worked.</p>
+<p>I was going to use sharp’s <code>.greyscale()</code>. Reading the spec, it turns out that isn’t the same operation as CSS <code>grayscale()</code> — the CSS filter shorthands are specified to operate in sRGB, while libvips does its own colourspace conversion. So I derived the matrix myself:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode ts code-with-copy"><code class="sourceCode typescript"><span id="cb4-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sharp</span>(input)</span>
+<span id="cb4-2">  <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">pipelineColourspace</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"srgb"</span>)       <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// CSS filters are specified in sRGB, not linear light</span></span>
+<span id="cb4-3">  <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rotate</span>()                          <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// bake EXIF orientation in before metadata is dropped</span></span>
+<span id="cb4-4">  <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">recomb</span>(matrix)                    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// grayscale × sepia, composed</span></span>
+<span id="cb4-5">  <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">linear</span>(slope<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> intercept <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">255</span>)    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// contrast; sharp works 0–255, the spec 0–1</span></span></code></pre></div></div>
+<p>But a derivation isn’t a measurement, so I built a measurement tool: run the canvas filter, run the sharp output, compare pixel by pixel in ΔE00. The agreed thresholds were mean ≤ 1.5 and p95 ≤ 3.0.</p>
+<p><strong>The first run passed.</strong> Within each photo, mean, p95 and max came back as the same number:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>fixture</th>
+<th>mean</th>
+<th>p95</th>
+<th>max</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>window.jpg</code></td>
+<td>0.4607</td>
+<td>0.4600</td>
+<td>0.4607</td>
+</tr>
+<tr class="even">
+<td><code>tram.jpg</code></td>
+<td>0.5591</td>
+<td>0.5500</td>
+<td>0.5591</td>
+</tr>
+<tr class="odd">
+<td><code>notebook.jpg</code></td>
+<td>0.0000</td>
+<td>0.0000</td>
+<td>0.0000</td>
+</tr>
+</tbody>
+</table>
+<p>That isn’t a coincidence, it’s a tell. A distribution whose mean equals its maximum contains one value. The fixtures were flat-colour placeholders, so each image contributed exactly one colour: three colours sampled, across three million pixels.</p>
+<p>We had agreed on a rule for this project: <em>stop when the threshold is met.</em> By that rule I should have stopped there. I didn’t. I built a synthetic colour chart covering 262,144 colours and re-ran it: mean <strong>0.4495</strong>, p95 <strong>1.1900</strong>, max <strong>1.8209</strong>. Sharp lands within 1/255 per channel of the spec reference values before JPEG encoding.</p>
+<p>The lesson isn’t “test more.” It’s that <strong>“stop when green” is a good rule that silently assumes the measurement is valid.</strong> Had I followed it, the central evidence in this post would be fabricated — not falsified, just meaningless.</p>
+<p>One more thing fell out while I was in there. Adjusting the font stack along the same seam, I found two sans-serif families sitting inside <code>FONT_SERIF</code> — and the one Windows resolved to was one of them. “The letter body is serif” had never once been true on Windows. A good abstraction boundary is also a developing agent for bugs that were already there.</p>
+<p>Current state of the whole thing: 22 files, 225 tests. The Noto source font is 16,851,596 bytes; a fixture subset covering 153 distinct characters is 54.0 KB; the two preloaded Courier Prime weights are 22,780 bytes. ⚠️ One number I can’t stand behind: the subset size slope (≈1.4 KB + 0.345 KB per character, from 6 points) was measured against temporary samples that have since been deleted, and can’t be reproduced from the repo as it stands.</p>
+</section>
+<section id="the-strongest-argument-against-my-own-claim" class="level2">
+<h2 class="anchored" data-anchor-id="the-strongest-argument-against-my-own-claim">The strongest argument against my own claim</h2>
+<p>Here’s the awkward part, and I’d rather write it than let a reader find it.</p>
+<p>I keep a decision log for this project. It has 72 rows. Not one of them mentions <code>resolvePhotoUrl</code>, the single branch point, or the two targets. Twenty-six rows were written on 2026-07-24 — the same day that function was born — including entries at this level of consequence:</p>
+<blockquote class="blockquote">
+<p>Use gray-matter for frontmatter. Rationale: boring and standard; hand-rolling 30 lines of YAML handling isn’t worth owning.</p>
+</blockquote>
+<table class="decision-log">
+<caption>
+Decision log · 2026-07-24 · 26 entries
+</caption>
+<tbody>
+<tr>
+<td>
+09
+</td>
+<td>
+gray-matter for frontmatter
+</td>
+</tr>
+<tr>
+<td>
+15
+</td>
+<td>
+<code>&lt;Photo&gt;</code> carries only <code>src</code>; alt and dimensions come from the manifest
+</td>
+</tr>
+<tr>
+<td>
+19
+</td>
+<td>
+Dates are formatted by slicing the ISO string, never via <code>new Date</code>
+</td>
+</tr>
+<tr>
+<td>
+21
+</td>
+<td>
+Noted: React SSR emits <code>&lt;!– –&gt;</code> between adjacent text nodes
+</td>
+</tr>
+<tr>
+<td>
+24
+</td>
+<td>
+The email postmark is not rotated, unlike the web one
+</td>
+</tr>
+<tr>
+<td>
+25
+</td>
+<td>
+Photos are absent from the plain-text alternative
+</td>
+</tr>
+<tr class="absent">
+<td>
+—
+</td>
+<td>
+Both targets go through one function, so the two cannot drift apart
+</td>
+</tr>
+</tbody>
+</table>
+<p class="decision-log-note">
+never recorded as a decision — it lives only in a comment above the function
+</p>
+<p class="decision-log-total">
+72 rows in the log · 0 mention it
+</p>
+<p>Look at rows 15, 24 and 25. Those are decisions about photo props, about the email postmark rendering differently from the web one, about photos being absent from the plain-text alternative. The log was not blind to this territory that day. It recorded three consequences of the split between the two targets, and not the mechanism that makes the split safe to have.</p>
+<p>The easy version of this story is “nobody thought of it.” That version is false. The invariant <em>was</em> written down. It was written down directly above the function it governs, on the day that function was created, complete with its scope.</p>
+<p>And there’s a good argument that this is the correct place. Anyone editing that function is guaranteed to read it. Nobody reads row 47 of a decision log. On that reading, the absence isn’t a failure at all — it’s correct division of labour, and my headline is just a person being hard on themselves about note-taking.</p>
+<p>So the real question isn’t “why wasn’t it logged.” It’s: <strong>which decisions need to exist in two places at once?</strong></p>
+<p>My current answer: when violating the invariant produces its consequence in a <em>different file</em>. The comment above <code>resolvePhotoUrl</code> governs <code>resolvePhotoUrl</code> perfectly well. It has no reach at all over someone, three months later, assembling a filename by hand inside <code>components.email.tsx</code>.</p>
+<p>I have evidence that this failure mode is real, because I nearly committed it myself. Building plate numbering, my first version put <code>plateLabel()</code> in <code>components/ui/Photo.tsx</code> and imported it from the email side — which would have dragged <code>next/image</code> into the email module graph. What stopped me was a comment written three months earlier in <code>frontmatter.ts</code>. A seam doesn’t hold itself open once drawn; it’s held by a chain of comments, and the chain is only as long as someone happened to make it.</p>
+<p>I’m not going to resolve this section. Leaving it open is worth more than settling it.</p>
+</section>
+<section id="what-this-leaves" class="level2">
+<h2 class="anchored" data-anchor-id="what-this-leaves">What this leaves</h2>
+<p><strong>Locally</strong>, there’s a falsifiable prediction. This seam has three more trips I expect it to take: the Phase B Storage path (predicted the day it was born, still hasn’t happened), responsive sizes, and signed URLs. Each of those should touch <code>resolvePhotoUrl</code> and nothing else. If any of them doesn’t, the seam is in the wrong place, and I’d rather have written that down in advance.</p>
+<p><strong>More broadly</strong>, five things I’d carry to the next project:</p>
+<ol type="1">
+<li><strong>You don’t need to predict the third requirement.</strong> You only need to not solve the second one with copy-paste. The second occurrence is the cheapest moment there is — the difference is concrete already, and there are still only two sites to change.</li>
+<li><strong>Ask whether the list will get longer, not whether the differences are numerous.</strong> One difference on a growing axis beats five on a closed one.</li>
+<li><strong>Check whether the axis has a name.</strong> This project’s did: <code>RenderTarget</code>. A named axis is an axis you can close, and a closed union is an axis the compiler will police.</li>
+<li><strong>Look at the failure shape.</strong> If scattering produces silent inconsistency rather than a compile error, the seam is worth an order of magnitude more than the line count suggests.</li>
+<li><strong>Then write it somewhere it will actually be read</strong> — which is the one I didn’t do.</li>
+</ol>
+</section>
+<section id="what-this-post-is-not-evidence-of" class="level2">
+<h2 class="anchored" data-anchor-id="what-this-post-is-not-evidence-of">What this post is not evidence of</h2>
+<p>Three things are still open, and the numbers above shouldn’t be read as covering them.</p>
+<p><strong>The seam has never been verified on the email side for real.</strong> I’ve checked that the URLs return 200, that the payload is within budget, and that the filenames are correct. No letter has ever actually been sent.</p>
+<p><strong>Every measurement here sits on placeholder content.</strong> Three flat-colour images, one 352-character fixture letter, and five temporary samples that no longer exist. Not one real photograph, not one real-length letter.</p>
+<p><strong>“One design, two implementations” isn’t solved, only suppressed.</strong> Web does CSS filters, email does a burned file, and those can drift forever. The alternative recorded in the docs — have the web load the burned plate too — would guarantee consistency, at the cost of a second network round trip before the image appears. I chose the one that can drift and pinned it down with ΔE measurement. That’s consistency bought with tests, not consistency by construction.</p>
+<hr>
+<p><em>Code is on <a href="https://github.com/jujuliaa12/judayori">GitHub</a>. Tools and specs referenced above: <a href="https://sharp.pixelplumbing.com">sharp</a>, <a href="https://www.npmjs.com/package/subset-font">subset-font</a>, <a href="https://harfbuzz.github.io">harfbuzz</a>, W3C Filter Effects Level 1 (the matrix definitions for <code>grayscale()</code> / <code>sepia()</code> / <code>contrast()</code> and their sRGB operating space), and Sharma, Wu &amp; Dalal, “The CIEDE2000 Color-Difference Formula,” Color Research &amp; Application 30(1), 2005.</em></p>
+<p><em>The general form of this argument is fifty-four years old: D. L. Parnas, “On the Criteria To Be Used in Decomposing Systems into Modules,” CACM 15(12), 1972 — module boundaries should follow the decisions likely to change, not the steps of the process.</em></p>
+
+
+</section>
+
+ ]]></description>
+  <category>architecture</category>
+  <category>abstraction</category>
+  <category>retrospective</category>
+  <guid>https://blog.judayori.com/posts/the-decision-nobody-logged/</guid>
+  <pubDate>Sun, 26 Jul 2026 00:00:00 GMT</pubDate>
+  <media:content url="https://blog.judayori.com/posts/the-decision-nobody-logged/blog-figures/seam-scattered-vs-centred.svg" medium="image" type="image/svg+xml"/>
+</item>
 <item>
   <title>Why intensity-based ranking fails in pseudopupil detection</title>
   <dc:creator>Julia Tseng</dc:creator>
