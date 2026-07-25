@@ -11,8 +11,9 @@ website:
       - about.qmd
       - icon: github
         href: https://github.com/jujuliaa12
-      - icon: bluesky
-        href: https://bsky.app/
+      # 填上真實網址後把註解取消
+      # - icon: bluesky
+      #   href: https://bsky.app/profile/你的帳號
 format:
   html:
     theme:

@@ -12,4 +12,7 @@ Thumbs.db
 # Temporary render files
 *.html.tmp
 
+# 本地寫作筆記，不發佈也不上傳
+/_writing/
+
 **/*.quarto_ipynb

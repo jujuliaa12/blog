@@ -4,16 +4,16 @@ image: profile.jpg
 about:
   template: jolla
   links:
-    - icon: bluesky
-      text: Bluesky
-      href: https://bsky.app/
-    - icon: linkedin
-      text: LinkedIn
-      href: https://linkedin.com
     - icon: github
       text: Github
-      href: https://github.com
-
+      href: https://github.com/jujuliaa12
+    # 填上真實網址後把註解取消，就會顯示在 About 頁
+    # - icon: linkedin
+    #   text: LinkedIn
+    #   href: https://www.linkedin.com/in/你的帳號
+    # - icon: bluesky
+    #   text: Bluesky
+    #   href: https://bsky.app/profile/你的帳號
 ---
 
 About this blog
