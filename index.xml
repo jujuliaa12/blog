@@ -23,13 +23,13 @@
 
 <section id="the-sound-of-interest-being-paid" class="level2">
 <h2 class="anchored" data-anchor-id="the-sound-of-interest-being-paid">The sound of interest being paid</h2>
-<p>Three months into this project, I read through the existing code and the first thing I said to my collaborator was:</p>
+<p>A day into this project, I read back through the code from the night before, and the first thing I said to my collaborator was:</p>
 <blockquote class="blockquote">
 <p><code>resolvePhotoUrl</code> is already the single branch point between the two targets, so that part of the pipeline is less invasive than you’re expecting.</p>
 </blockquote>
 <p>That sentence is a payment landing in an account. What neither of us knew at the time was when the principal had been deposited, or that depositing it had never felt like a deposit. It also never made it into the decision log — but that part took me longer to notice than it should have.</p>
 <p>The project is a letters system. One MDX file has to become two things: a web page, and an email. That’s the stated technical core — one source, two renderers, and a parity test that fails if they drift.</p>
-<p>Three months ago the two targets differed in exactly one way: email needs absolute URLs, web needs relative ones. Then the second difference arrived. Photos should always render as monochrome plates, and email clients don’t support CSS filters, so the web target can do it with a filter and the email target has to have it burned into the pixels.</p>
+<p>The day before, the two targets differed in exactly one way: email needs absolute URLs, web needs relative ones. Then the second difference arrived. Photos should always render as monochrome plates, and email clients don’t support CSS filters, so the web target can do it with a filter and the email target has to have it burned into the pixels.</p>
 <p>The interesting question was never “how do I implement monochrome.” It was: <em>a list of differences that will keep growing — where should it be allowed to live?</em></p>
 </section>
 <section id="why-the-obvious-fix-is-worse-than-it-looks" class="level2">
@@ -164,7 +164,7 @@ font-style: inherit;">;</span></span>
 <span id="cb1-16">}</span></code></pre></div></div>
 <p>The middle paragraph is worth reading as a historical artifact: it is the entire difference between the two targets, as of that day, and it is one sentence long.</p>
 <p>Then read the last sentence. <em>“Only this function changes.”</em> That prediction was written the day the function was written. Whoever wrote it knew they were establishing an invariant and knew what its scope was.</p>
-<p>What cashed the prediction three months later was not Supabase. It was the monochrome plate. The axis was right and the event was wrong — which is the whole point. The value came from naming the axis, not from forecasting what would travel down it.</p>
+<p>What cashed the prediction the next day was not Supabase. It was the monochrome plate. The axis was right and the event was wrong — which is the whole point. The value came from naming the axis, not from forecasting what would travel down it.</p>
 </section>
 <section id="wiring-the-plate-into-the-same-seam" class="level2">
 <h2 class="anchored" data-anchor-id="wiring-the-plate-into-the-same-seam">Wiring the plate into the same seam</h2>
@@ -525,8 +525,8 @@ never recorded as a decision — it lives only in a comment above the function
 <p>The easy version of this story is “nobody thought of it.” That version is false. The invariant <em>was</em> written down. It was written down directly above the function it governs, on the day that function was created, complete with its scope.</p>
 <p>And there’s a good argument that this is the correct place. Anyone editing that function is guaranteed to read it. Nobody reads row 47 of a decision log. On that reading, the absence isn’t a failure at all — it’s correct division of labour, and my headline is just a person being hard on themselves about note-taking.</p>
 <p>So the real question isn’t “why wasn’t it logged.” It’s: <strong>which decisions need to exist in two places at once?</strong></p>
-<p>My current answer: when violating the invariant produces its consequence in a <em>different file</em>. The comment above <code>resolvePhotoUrl</code> governs <code>resolvePhotoUrl</code> perfectly well. It has no reach at all over someone, three months later, assembling a filename by hand inside <code>components.email.tsx</code>.</p>
-<p>I have evidence that this failure mode is real, because I nearly committed it myself. Building plate numbering, my first version put <code>plateLabel()</code> in <code>components/ui/Photo.tsx</code> and imported it from the email side — which would have dragged <code>next/image</code> into the email module graph. What stopped me was a comment written three months earlier in <code>frontmatter.ts</code>. A seam doesn’t hold itself open once drawn; it’s held by a chain of comments, and the chain is only as long as someone happened to make it.</p>
+<p>My current answer: when violating the invariant produces its consequence in a <em>different file</em>. The comment above <code>resolvePhotoUrl</code> governs <code>resolvePhotoUrl</code> perfectly well. It has no reach at all over someone, months later, assembling a filename by hand inside <code>components.email.tsx</code>.</p>
+<p>I have evidence that this failure mode is real, because I nearly committed it myself. Building plate numbering, my first version put <code>plateLabel()</code> in <code>components/ui/Photo.tsx</code> and imported it from the email side — which would have dragged <code>next/image</code> into the email module graph. What stopped me was a comment written the night before in <code>frontmatter.ts</code>. A seam doesn’t hold itself open once drawn; it’s held by a chain of comments, and the chain is only as long as someone happened to make it.</p>
 <p>I’m not going to resolve this section. Leaving it open is worth more than settling it.</p>
 </section>
 <section id="what-this-leaves" class="level2">
