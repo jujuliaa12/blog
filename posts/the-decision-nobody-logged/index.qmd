@@ -1,6 +1,6 @@
 ---
 title: "The decision that became the architecture didn't look like a decision"
-subtitle: "An audit of a dual-output project: what made a three-month-later requirement cost two lines, and why nobody wrote it down as a choice"
+subtitle: "An audit of a dual-output project: what made a next-day requirement cost two lines, and why nobody wrote it down as a choice"
 author: "Julia Tseng"
 date: "2026-07-26"
 categories: [architecture, abstraction, retrospective]
@@ -14,7 +14,7 @@ format:
 
 ## The sound of interest being paid
 
-Three months into this project, I read through the existing code and
+A day into this project, I read back through the code from the night before, and
 the first thing I said to my collaborator was:
 
 > `resolvePhotoUrl` is already the single branch point between the two
@@ -31,7 +31,7 @@ The project is a letters system. One MDX file has to become two
 things: a web page, and an email. That's the stated technical core —
 one source, two renderers, and a parity test that fails if they drift.
 
-Three months ago the two targets differed in exactly one way: email
+The day before, the two targets differed in exactly one way: email
 needs absolute URLs, web needs relative ones. Then the second
 difference arrived. Photos should always render as monochrome plates,
 and email clients don't support CSS filters, so the web target can do
@@ -114,7 +114,7 @@ Then read the last sentence. *"Only this function changes."* That
 prediction was written the day the function was written. Whoever wrote it knew they were establishing an invariant and
 knew what its scope was.
 
-What cashed the prediction three months later was not Supabase. It
+What cashed the prediction the next day was not Supabase. It
 was the monochrome plate. The axis was right and the event was wrong —
 which is the whole point. The value came from naming the axis, not
 from forecasting what would travel down it.
@@ -371,15 +371,15 @@ decisions need to exist in two places at once?**
 My current answer: when violating the invariant produces its
 consequence in a *different file*. The comment above `resolvePhotoUrl`
 governs `resolvePhotoUrl` perfectly well. It has no reach at all over
-someone, three months later, assembling a filename by hand inside
+someone, months later, assembling a filename by hand inside
 `components.email.tsx`.
 
 I have evidence that this failure mode is real, because I nearly
 committed it myself. Building plate numbering, my first version put
 `plateLabel()` in `components/ui/Photo.tsx` and imported it from the
 email side — which would have dragged `next/image` into the email
-module graph. What stopped me was a comment written three months
-earlier in `frontmatter.ts`. A seam doesn't hold itself open once
+module graph. What stopped me was a comment written the night
+before in `frontmatter.ts`. A seam doesn't hold itself open once
 drawn; it's held by a chain of comments, and the chain is only as long
 as someone happened to make it.
 
