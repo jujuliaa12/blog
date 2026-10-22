@@ -141,7 +141,7 @@ shipping-time disaster in the previous section.
 +  return `${requireSiteUrl("render the email target")}${plateSrc(path)}`;
 ```
 
-The whole wiring change, commit `555eb17`:
+The whole wiring change, commit `fd1d424`:
 
 | File | +/− |
 |---|---|
