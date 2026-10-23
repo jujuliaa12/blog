@@ -1,0 +1,123 @@
+/*-- scss:defaults --*/
+
+// 顏色與字型在 _brand.yml。這裡只放 brand.yml 表達不了的版面細節。
+
+$navbar-bg: #F7F3EA;
+$navbar-fg: #262119;
+$navbar-hl: #B23A26;
+
+// 標題區不要整塊底色。title-block-banner 保留，讓標題區有自己的節奏，
+// 但用紙色加一條細線收邊，而不是一塊灰。
+$title-banner-bg: #F7F3EA;
+$title-banner-color: #262119;
+
+$border-color: rgba(38, 33, 25, 0.18);
+$code-block-bg: #EFE9DC;
+
+/*-- scss:rules --*/
+
+// 中英混排：Latin 字型在前，CJK 字型接在後面（同 judayori 的字型順序原則）。
+body {
+  font-family: "Source Serif 4", "Noto Serif TC", Georgia, serif;
+  font-feature-settings: "kern", "liga";
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, .title, .listing-title {
+  font-family: "Source Serif 4", "Noto Serif TC", Georgia, serif;
+  letter-spacing: -0.005em;
+}
+
+// 介面標籤：日期、作者、分類、目錄標題，一律等寬小字，像信封上的打字機字。
+.listing-date, .listing-author,
+.quarto-title-meta-heading,
+.quarto-listing-category-title,
+#toc-title,
+.quarto-category,
+.listing-category {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+
+.quarto-title-meta-heading,
+#toc-title,
+.quarto-listing-category-title {
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: #6B6152;
+}
+
+.listing-date, .listing-author,
+.quarto-title-meta-contents {
+  color: #6B6152;
+  font-size: 0.82rem;
+}
+
+// 標題區：細線收邊。
+.quarto-title-banner {
+  border-bottom: 1px solid $border-color;
+}
+
+// 分類標籤：不要藥丸，只要細框。
+.quarto-category,
+.quarto-title .quarto-categories .quarto-category,
+.listing-category {
+  border: 1px solid $border-color;
+  border-radius: 0;
+  color: #6B6152;
+  font-size: 0.68rem;
+  opacity: 1;
+}
+
+// 連結 hover 才出底線，平時只靠顏色。
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+// 首頁列表的文章標題保持墨色，hover 才變紅：滿版紅色標題會用光紅色的額度。
+.quarto-listing-default .listing-title a,
+.quarto-post .listing-title,
+a .listing-title {
+  color: #262119;
+}
+
+.quarto-post:hover .listing-title {
+  color: #B23A26;
+}
+
+.quarto-post {
+  border-bottom-color: $border-color;
+}
+
+// 引言：紅色細線，不要灰底。
+blockquote {
+  border-left: 2px solid #B23A26;
+  color: #4A4236;
+}
+
+// 目錄的作用中項目。
+#TOC .active, .sidebar nav[role="doc-toc"] ul > li > a.active {
+  color: #B23A26;
+  border-left-color: #B23A26;
+}
+
+// 程式碼區塊：比紙深一階的底，不另外引進灰。
+div.sourceCode, pre.sourceCode {
+  background-color: #EFE9DC;
+  border: none;
+  border-radius: 0;
+}
+
+hr {
+  border-color: $border-color;
+  opacity: 1;
+}
+
+// 圖片在紙色背景上要有一點邊，否則白底的圖表會像貼紙。
+.quarto-figure img, .listing-image img, img.thumbnail-image {
+  background: #fff;
+}

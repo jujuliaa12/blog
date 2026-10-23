@@ -1,0 +1,48 @@
+# 全站的顏色與字型。延續 judayori 的「紙與墨」：
+# 一張暖色的紙、一種墨、一個只在需要時出現的紅。
+# 站台只有淺色主題，這裡不定義深色版本。
+color:
+  palette:
+    # 比 judayori 的 #F0E8D4 淡一階：那邊是信紙，這邊是要讀很長的技術文章。
+    paper: "#F7F3EA"
+    paper-deep: "#EFE9DC"
+    ink: "#262119"
+    ink-soft: "#6B6152"
+    # blog-figures/*.svg 和 styles.css 的決策紀錄表用的就是這個紅。
+    red: "#B23A26"
+  background: paper
+  foreground: ink
+  primary: red
+  secondary: ink-soft
+  light: paper-deep
+  dark: ink
+
+typography:
+  fonts:
+    - family: Source Serif 4
+      source: google
+      weight: [400, 600]
+      style: [normal, italic]
+    - family: Noto Serif TC
+      source: google
+      weight: [400, 600]
+    - family: IBM Plex Mono
+      source: google
+      weight: [400, 500]
+  base:
+    family: Source Serif 4
+    size: 1.0625rem
+    line-height: 1.75
+  headings:
+    family: Source Serif 4
+    weight: 600
+    color: ink
+  monospace:
+    family: IBM Plex Mono
+    size: 0.86em
+  monospace-inline:
+    color: ink
+    background-color: paper-deep
+  link:
+    color: red
+    decoration: none
