@@ -5,9 +5,10 @@
    圖裡唯一在傳遞訊息的形狀只有那個虛線空框，而虛線空框用 CSS 一行就有。
    換成表格之後文字可以被選取、被搜尋、被翻譯，進 RSS 不會壞，
    螢幕閱讀器讀到的是內容本身而不是我寫的 alt。
-   顏色刻意跟 blog-figures/*.svg 用同一組，圖和表才像同一套東西。 */
+   顏色刻意跟 blog-figures/*.svg 用同一組，圖和表才像同一套東西；
+   紅色取自 _brand.yml，全站只定義一次。 */
 .decision-log {
-  --dl-red: #b23a26;
+  --dl-red: var(--brand-red);
   --dl-hair: rgba(38, 33, 25, 0.28);
   width: 100%;
   margin: 1.6rem 0 0.6rem;
@@ -42,7 +43,9 @@
   opacity: 0.6;
 }
 
-.decision-log code {
+/* 選擇器要比 Quarto 的 `td code:not(.sourceCode)` 更具體，
+   否則 _brand.yml 的行內程式碼底色會蓋進表格裡。 */
+.decision-log td code:not(.sourceCode) {
   font-size: inherit;
   padding: 0;
   background: none;
@@ -60,7 +63,7 @@
 
 .decision-log-note {
   margin: 0.6rem 0 1.4rem;
-  color: #b23a26;
+  color: var(--brand-red);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.78rem;
 }
